@@ -249,7 +249,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: "credentialId", label: "Credential ID", type: "text" },
       { name: "credentialUrl", label: "Verification URL", type: "url" },
       { name: "description", label: "Note", type: "textarea", rows: 2 },
-      { name: "imageAssetId", label: "Badge image", type: "asset", accept: "image" },
+      { name: "imageAssetId", label: "Certificate file (image or PDF)", type: "asset", accept: "any", help: "Visitors get a \u201cView certificate\u201d button: images open in a preview, PDFs open in the browser." },
       order,
     ],
     list: async ({ search, status }) =>

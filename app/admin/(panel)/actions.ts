@@ -99,6 +99,18 @@ async function deleteMessageRecord(id: string, actorId: string) {
   await recordAudit({ actorId, action: "delete", entityType: "ContactMessage", entityId: id });
 }
 
+export async function deleteAllMessages(): Promise<FormState> {
+  const admin = await requireAdmin();
+  try {
+    const { count } = await prisma.contactMessage.deleteMany({});
+    await recordAudit({ actorId: admin.id, action: "delete", entityType: "ContactMessage", metadata: { scope: "all", count } });
+  } catch (e) {
+    return { message: toSafeMessage(e, "admin:messages:delete-all") };
+  }
+  revalidatePath("/admin/messages");
+  return { ok: true };
+}
+
 export async function setMessageStatus(id: string, status: string): Promise<FormState> {
   const parsed = messageStatusSchema.safeParse(status);
   if (!parsed.success) return { message: "Invalid status." };

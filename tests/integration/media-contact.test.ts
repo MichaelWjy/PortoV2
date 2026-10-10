@@ -5,10 +5,11 @@ vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T) => fn, revalidateTag: 
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage/drivers";
 import { deleteAsset, replaceAsset, uploadAsset } from "@/lib/services/media";
-import { saveProfile, saveProject } from "@/lib/services/content";
+import { saveCertification, saveProfile, saveProject } from "@/lib/services/content";
+import { getHomeContent } from "@/lib/services/public";
 import { createContactMessage } from "@/lib/services/contact";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
-import { profileSchema, projectSchema } from "@/lib/validation/schemas";
+import { certificationSchema, profileSchema, projectSchema } from "@/lib/validation/schemas";
 import { createAdmin, resetDatabase } from "../support/db";
 
 // 1x1 transparent PNG.
@@ -76,6 +77,19 @@ describe("project gallery", () => {
   it("refuses non-image files in the gallery", async () => {
     const pdf = await uploadAsset(new File([Buffer.from("%PDF-1.7 minimal test document %%EOF")], "doc.pdf", { type: "application/pdf" }), "", actor);
     await expect(saveProject(null, project({ galleryAssetIds: [pdf.id] }), actor)).rejects.toThrow(/must be images/);
+  });
+});
+
+describe("certificate files", () => {
+  it("accepts an image or a PDF and tells the page which one it is", async () => {
+    const pdf = await uploadAsset(new File([Buffer.from("%PDF-1.7 minimal test document %%EOF")], "cert.pdf", { type: "application/pdf" }), "", actor);
+    const img = await uploadAsset(png("badge.png"), "Badge", actor);
+    const cert = (name: string, imageAssetId: string) => certificationSchema.parse({ name, issuer: "Issuer", status: "PUBLISHED", imageAssetId });
+    await saveCertification(null, cert("PDF cert", pdf.id), actor);
+    await saveCertification(null, cert("Image cert", img.id), actor);
+    const byName = Object.fromEntries((await getHomeContent()).certifications.map((c) => [c.name, c.file]));
+    expect(byName["PDF cert"]).toMatchObject({ isPdf: true, url: `/media/${pdf.objectKey}` });
+    expect(byName["Image cert"]).toMatchObject({ isPdf: false, alt: "Badge" });
   });
 });
 

@@ -71,7 +71,7 @@ async function loadHome() {
       },
     }),
     prisma.socialLink.findMany({ where: { isVisible: true }, orderBy: [{ sortOrder: "asc" }, { platform: "asc" }] }),
-    prisma.certification.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sortOrder: "asc" }, { issueDate: "desc" }], include: { image: assetSelect } }),
+    prisma.certification.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sortOrder: "asc" }, { issueDate: "desc" }], include: { image: { select: { objectKey: true, altText: true, width: true, height: true, mimeType: true } } } }),
   ]);
 
   const skillGroups = new Map<string, { name: string; description: string | null }[]>();
@@ -146,7 +146,8 @@ async function loadHome() {
       credentialId: c.credentialId,
       credentialUrl: c.credentialUrl,
       description: c.description,
-      image: image(c.image),
+      // The certificate itself: an image (previewed in the page) or a PDF (opened in the browser).
+      file: c.image ? { ...image(c.image)!, isPdf: c.image.mimeType === "application/pdf" } : null,
     })),
     socialLinks: socialLinks.map((s) => ({ id: s.id, platform: s.platform, label: s.label, url: s.url, icon: s.icon })),
   };
@@ -159,7 +160,7 @@ export type PublicMilestone = HomeContent["milestones"][number];
  * Part of every cache key. Cached entries outlive deployments (e.g. Vercel's data cache), so when the shape
  * of the data below changes, bump this: new code then never reads an entry written by old code.
  */
-const DATA_VERSION = "2026-10-10.gallery";
+const DATA_VERSION = "2026-10-10.cert-file";
 
 export const getHomeContent = unstable_cache(loadHome, ["home-content", DATA_VERSION], { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 });
 

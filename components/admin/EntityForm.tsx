@@ -82,7 +82,7 @@ export function EntityForm({ fields, values, action, id, submitLabel = "Save", a
         );
       }
       case "asset": {
-        const options = assets.filter((a) => (f.accept === "pdf" ? a.url.endsWith(".pdf") : a.isImage));
+        const options = assets.filter((a) => (f.accept === "any" ? true : f.accept === "pdf" ? a.url.endsWith(".pdf") : a.isImage));
         const current = options.find((a) => a.id === live[f.name]);
         return (
           <div className="adm-asset">

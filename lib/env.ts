@@ -17,6 +17,8 @@ const schema = z
     AUTH_GOOGLE_SECRET: optional,
     AUTH_DEV_LOGIN: z.enum(["true", "false"]).optional(),
     IP_HASH_SALT: z.string().min(8, "IP_HASH_SALT must be at least 8 characters"),
+    /** Shared secret for the daily cleanup job (/api/cron/prune). Unset disables that endpoint. */
+    CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 characters").optional(),
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
     LOCAL_STORAGE_DIR: z.string().default("./storage/uploads"),
     S3_BUCKET: optional,

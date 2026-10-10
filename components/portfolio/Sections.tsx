@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Award } from "lucide-react";
+import { ArrowUpRight, Award, FileText } from "lucide-react";
+import { CertificatePreview } from "./CertificatePreview";
 import type { HomeContent } from "@/lib/services/public";
 import { Multiline } from "./Multiline";
 import { ProjectCard } from "./ProjectCard";
@@ -164,8 +165,8 @@ export function CertificationsSection({ settings, certifications }: { settings: 
         <ul className="certs">
           {certifications.map((c) => (
             <li key={c.id} className={`cert ${c.expired ? "expired" : ""}`}>
-              <span className="badge" aria-hidden={c.image ? undefined : true}>
-                {c.image ? <Image src={c.image.url} alt={c.image.alt || `${c.issuer} badge`} width={44} height={44} /> : <Award size={18} strokeWidth={1.5} />}
+              <span className="badge" aria-hidden="true">
+                {c.file && !c.file.isPdf ? <Image src={c.file.url} alt="" width={44} height={44} /> : c.file ? <FileText size={18} strokeWidth={1.5} /> : <Award size={18} strokeWidth={1.5} />}
               </span>
               <b>{c.name}</b>
               <span className="when mono">{c.expired ? `Expired ${c.expires}` : (c.issued ?? "")}</span>
@@ -173,13 +174,14 @@ export function CertificationsSection({ settings, certifications }: { settings: 
                 {c.issuer}
                 {c.credentialId && <em> · ID {c.credentialId}</em>}
               </span>
-              {c.credentialUrl ? (
-                <a className="verify mono" href={c.credentialUrl} target="_blank" rel="noopener noreferrer" aria-label={`Verify ${c.name} (opens the issuer's site)`}>
-                  Verify <ArrowUpRight size={13} aria-hidden="true" />
-                </a>
-              ) : (
-                <span />
-              )}
+              <span className="actions">
+                {c.file && <CertificatePreview file={c.file} name={c.name} />}
+                {c.credentialUrl && (
+                  <a className="verify mono" href={c.credentialUrl} target="_blank" rel="noopener noreferrer" aria-label={`Verify ${c.name} (opens the issuer's site)`}>
+                    Verify <ArrowUpRight size={13} aria-hidden="true" />
+                  </a>
+                )}
+              </span>
               {c.description && <p>{c.description}</p>}
             </li>
           ))}

@@ -7,7 +7,7 @@ export type Field =
   | { name: string; label: string; type: "select"; options: Option[]; required?: boolean; help?: string; allowEmpty?: boolean }
   | { name: string; label: string; type: "multiselect"; options: Option[]; help?: string }
   | { name: string; label: string; type: "status" }
-  | { name: string; label: string; type: "asset"; accept: "image" | "pdf"; help?: string }
+  | { name: string; label: string; type: "asset"; accept: "image" | "pdf" | "any"; help?: string }
   | { name: string; label: string; type: "route"; help?: string };
 
 /** Serializable form values: strings, booleans and string arrays. */

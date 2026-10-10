@@ -16,7 +16,7 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/admin/a
 
   return (
     <>
-      <PageHeader title="Audit log" description="Every administrative change. Records never include secrets or message contents." />
+      <PageHeader title="Audit log" description="Every administrative change. Records never include secrets or message contents. Entries older than 90 days are deleted automatically every day." />
       {logs.length === 0 ? (
         <Empty>No changes recorded yet.</Empty>
       ) : (

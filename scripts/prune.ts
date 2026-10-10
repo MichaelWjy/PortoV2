@@ -1,17 +1,18 @@
-/** Retention job (run daily from cron): deletes analytics older than 180 days and stale rate-limit buckets. */
+/** Retention job: same rules as the daily Vercel Cron (/api/cron/prune), for self-hosting or a manual run. */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { caFromEnv, pgOptions } from "../lib/db-ssl";
+import { pruneOldData, RETENTION_DAYS } from "../lib/retention";
 
 const prisma = new PrismaClient({ adapter: new PrismaPg(pgOptions(process.env.DATABASE_URL!, caFromEnv(process.env))) });
-const days = (n: number) => new Date(Date.now() - n * 86_400_000);
 
-Promise.all([
-  prisma.analyticsEvent.deleteMany({ where: { createdAt: { lt: days(180) } } }),
-  prisma.rateLimitBucket.deleteMany({ where: { windowStart: { lt: days(1) } } }),
-])
-  .then(([events, buckets]) => console.log(`Pruned ${events.count} analytics events, ${buckets.count} rate-limit buckets.`))
+pruneOldData(prisma)
+  .then((r) =>
+    console.log(
+      `Pruned ${r.auditLogs} audit-log entries (> ${RETENTION_DAYS.auditLog} days), ${r.analyticsEvents} analytics events (> ${RETENTION_DAYS.analytics} days), ${r.rateLimitBuckets} rate-limit buckets.`,
+    ),
+  )
   .catch((e) => {
     console.error(e);
     process.exitCode = 1;

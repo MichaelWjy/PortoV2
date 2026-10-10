@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
 import { Empty, PageHeader, StatusBadge } from "@/components/admin/ui";
 import { RecordButton } from "@/components/admin/RecordButton";
-import { deleteRecord, setMessageStatus } from "../actions";
+import { deleteAllMessages, deleteRecord, setMessageStatus } from "../actions";
 
 export const metadata = { title: "Messages" };
 const PAGE_SIZE = 20;
@@ -14,9 +14,10 @@ export default async function MessagesPage({ searchParams }: PageProps<"/admin/m
   const status = sp.status === "NEW" || sp.status === "READ" || sp.status === "ARCHIVED" ? sp.status : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
   const where: Prisma.ContactMessageWhereInput = status ? { status } : { status: { not: "ARCHIVED" } };
-  const [messages, total] = await Promise.all([
+  const [messages, total, allCount] = await Promise.all([
     prisma.contactMessage.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     prisma.contactMessage.count({ where }),
+    prisma.contactMessage.count(),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const href = (p: number) => `/admin/messages?${new URLSearchParams({ ...(status ? { status } : {}), page: String(p) })}`;
@@ -24,6 +25,16 @@ export default async function MessagesPage({ searchParams }: PageProps<"/admin/m
   return (
     <>
       <PageHeader title="Messages" description="Contact form submissions. Visible to administrators only; delete them when no longer needed." />
+      {allCount > 0 && (
+        <p style={{ marginBottom: 16 }}>
+          <RecordButton
+            action={deleteAllMessages}
+            label={`Delete all messages (${allCount})`}
+            variant="danger"
+            confirm={`Permanently delete all ${allCount} messages, including archived ones? This cannot be undone.`}
+          />
+        </p>
+      )}
       <nav className="adm-filters" aria-label="Filter messages">
         {[
           ["Inbox", "/admin/messages"],
