@@ -476,6 +476,7 @@ a { text-underline-offset: 4px; }
 /* Admin ------------------------------------------------------------------- */
 .adm { display: grid; grid-template-columns: 220px 1fr; min-height: 100svh; font-size: 14px; }
 .adm-side { border-right: 1px solid var(--line); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100svh; overflow-y: auto; }
+.adm-head { display: flex; align-items: center; justify-content: space-between; }
 .adm-side .logo { display: block; padding: 0 10px; }
 .adm-side .logo img { height: 26px; }
 .adm-side nav { display: grid; gap: 2px; }
