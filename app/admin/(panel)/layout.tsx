@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth/guard";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { Logo } from "@/components/portfolio/Logo";
 import { signOutAction } from "./actions";
 
 export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin" }, robots: { index: false, follow: false } };
@@ -14,7 +15,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
     <div className="adm">
       <aside className="adm-side">
         <a href="/" className="logo" target="_blank" rel="noopener" aria-label="MW, open the public site">
-          MW
+          <Logo />
         </a>
         <AdminNav />
         <div className="who">

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 
 type Props = {
   labels: { work: string; about: string; experience: string; contact: string };
@@ -46,7 +48,7 @@ export function SiteNav({ labels, availability, base }: Props) {
   return (
     <nav className={`nav ${overMap ? "over-map" : ""}`} aria-label="Main">
       <a href={base || "#top"} className="logo" aria-label="MW, back to top">
-        MW
+        <Logo />
       </a>
       <div className="links mono">
         {link("work", labels.work)}
@@ -54,14 +56,15 @@ export function SiteNav({ labels, availability, base }: Props) {
         {link("experience", labels.experience)}
         {link("contact", labels.contact)}
       </div>
-      {availability && availability.status !== "UNAVAILABLE" ? (
-        <span className={`av mono ${availability.status === "LIMITED" ? "limited" : ""}`}>
-          <i aria-hidden="true" />
-          {availability.label}
-        </span>
-      ) : (
-        <span aria-hidden="true" />
-      )}
+      <div className="nav-end">
+        {availability && availability.status !== "UNAVAILABLE" ? (
+          <span className={`av mono ${availability.status === "LIMITED" ? "limited" : ""}`}>
+            <i aria-hidden="true" />
+            {availability.label}
+          </span>
+        ) : null}
+        <ThemeToggle />
+      </div>
     </nav>
   );
 }
