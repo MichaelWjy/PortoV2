@@ -33,7 +33,7 @@ import {
 // Content saves ---------------------------------------------------------------
 
 export async function saveProject(_: FormState, fd: FormData) {
-  return handleSave(fd, projectSchema, content.saveProject, { listPath: "/admin/projects", arrays: ["technologyIds"] });
+  return handleSave(fd, projectSchema, content.saveProject, { listPath: "/admin/projects", arrays: ["technologyIds", "galleryAssetIds"] });
 }
 export async function saveTechnology(_: FormState, fd: FormData) {
   return handleSave(fd, technologySchema, content.saveTechnology, { listPath: "/admin/technologies" });

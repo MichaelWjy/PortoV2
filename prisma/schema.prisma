@@ -133,10 +133,23 @@ model Project {
   updatedAt        DateTime      @updatedAt
 
   technologies    ProjectTechnology[]
+  gallery         ProjectImage[]
   milestones      Milestone[]
   analyticsEvents AnalyticsEvent[]
 
   @@index([status, sortOrder])
+}
+
+/// Extra images (screenshots, documentation) shown in the project detail carousel after the cover.
+model ProjectImage {
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  sortOrder Int        @default(0)
+
+  @@id([projectId, assetId])
+  @@index([assetId])
 }
 
 model Technology {
@@ -300,6 +313,7 @@ model MediaAsset {
   profileAboutImages Profile[]       @relation("ProfileAboutImage")
   profileResume      Profile[]       @relation("ProfileResume")
   projectCovers      Project[]       @relation("ProjectCover")
+  projectGallery     ProjectImage[]
   milestones         Milestone[]     @relation("MilestoneImage")
   certifications     Certification[] @relation("CertificationImage")
 }

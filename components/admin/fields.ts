@@ -1,4 +1,4 @@
-export type Option = { value: string; label: string };
+export type Option = { value: string; label: string; thumb?: string };
 
 export type Field =
   | { name: string; label: string; type: "text" | "url" | "email" | "date" | "number"; required?: boolean; help?: string; placeholder?: string }

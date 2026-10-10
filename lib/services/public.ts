@@ -19,6 +19,7 @@ const assetSelect = { select: { objectKey: true, altText: true, width: true, hei
 
 const projectInclude = {
   cover: assetSelect,
+  gallery: { orderBy: { sortOrder: "asc" }, select: { asset: assetSelect } },
   technologies: { select: { technology: { select: { name: true, slug: true } } }, orderBy: { technology: { name: "asc" } } },
 } as const;
 
@@ -44,6 +45,7 @@ function toProject(p: ProjectRow) {
     featured: p.featured,
     status: p.status,
     cover: image(p.cover),
+    gallery: p.gallery.map((g) => image(g.asset)).filter((g): g is PublicImage => g !== null),
     technologies: p.technologies.map((t) => t.technology),
     publishedAt: iso(p.publishedAt),
     updatedAt: p.updatedAt.toISOString(),
@@ -153,11 +155,17 @@ async function loadHome() {
 export type HomeContent = Awaited<ReturnType<typeof loadHome>>;
 export type PublicMilestone = HomeContent["milestones"][number];
 
-export const getHomeContent = unstable_cache(loadHome, ["home-content"], { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 });
+/**
+ * Part of every cache key. Cached entries outlive deployments (e.g. Vercel's data cache), so when the shape
+ * of the data below changes, bump this: new code then never reads an entry written by old code.
+ */
+const DATA_VERSION = "2026-10-10.gallery";
+
+export const getHomeContent = unstable_cache(loadHome, ["home-content", DATA_VERSION], { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 });
 
 export const getPublishedProjects = unstable_cache(
   async () => (await findProjects({ status: "PUBLISHED" })).map(toProject),
-  ["published-projects"],
+  ["published-projects", DATA_VERSION],
   { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 },
 );
 
@@ -166,7 +174,7 @@ export const getPublishedProject = unstable_cache(
     const [p] = await findProjects({ status: "PUBLISHED", slug });
     return p ? toProject(p) : null;
   },
-  ["published-project"],
+  ["published-project", DATA_VERSION],
   { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 },
 );
 

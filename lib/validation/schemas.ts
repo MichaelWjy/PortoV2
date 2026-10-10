@@ -87,6 +87,7 @@ export const projectSchema = z
     status,
     sortOrder,
     technologyIds: z.array(id).max(50).default([]),
+    galleryAssetIds: z.array(id).max(20).default([]),
   })
   .superRefine(dateRange);
 

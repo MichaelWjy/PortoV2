@@ -58,6 +58,27 @@ describe("media library", () => {
   });
 });
 
+describe("project gallery", () => {
+  const project = (over: Record<string, unknown>) =>
+    projectSchema.parse({ title: "P", slug: "p", projectType: "t", shortDescription: "s", description: "d", status: "PUBLISHED", ...over });
+
+  it("stores gallery images in the submitted order and protects them from deletion", async () => {
+    const [a, b] = [await uploadAsset(png("a.png"), "A", actor), await uploadAsset(png("b.png"), "B", actor)];
+    const p = await saveProject(null, project({ galleryAssetIds: [b.id, a.id] }), actor);
+    const rows = await prisma.projectImage.findMany({ where: { projectId: p.id }, orderBy: { sortOrder: "asc" } });
+    expect(rows.map((r) => r.assetId)).toEqual([b.id, a.id]);
+    await expect(deleteAsset(a.id, actor)).rejects.toThrow(/Project gallery: P/);
+
+    await saveProject(p.id, project({ galleryAssetIds: [a.id] }), actor);
+    expect((await prisma.projectImage.findMany({ where: { projectId: p.id } })).map((r) => r.assetId)).toEqual([a.id]);
+  });
+
+  it("refuses non-image files in the gallery", async () => {
+    const pdf = await uploadAsset(new File([Buffer.from("%PDF-1.7 minimal test document %%EOF")], "doc.pdf", { type: "application/pdf" }), "", actor);
+    await expect(saveProject(null, project({ galleryAssetIds: [pdf.id] }), actor)).rejects.toThrow(/must be images/);
+  });
+});
+
 describe("profile CV", () => {
   const PDF = Buffer.from("%PDF-1.7 minimal test document %%EOF");
   const profile = (over: Record<string, unknown>) =>

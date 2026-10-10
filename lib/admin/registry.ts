@@ -44,7 +44,11 @@ export const ENTITIES: Record<string, EntityConfig> = {
     publishable: true,
     defaults: { status: "DRAFT", sortOrder: "0", featured: false },
     fields: async () => {
-      const techs = await prisma.technology.findMany({ orderBy: { name: "asc" } });
+      const [techs, images] = await Promise.all([
+        prisma.technology.findMany({ orderBy: { name: "asc" } }),
+        // ponytail: gallery order = upload order (oldest first); add drag-to-reorder if that proves too rigid.
+        prisma.mediaAsset.findMany({ where: { mimeType: { startsWith: "image/" } }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, altText: true, objectKey: true } }),
+      ]);
       return [
         { name: "title", label: "Title", type: "text", required: true },
         { name: "slug", label: "Slug", type: "text", required: true, help: "URL: /projects/<slug>. Lowercase letters, numbers and hyphens." },
@@ -61,6 +65,13 @@ export const ENTITIES: Record<string, EntityConfig> = {
         { name: "liveUrl", label: "Live demo URL", type: "url" },
         { name: "coverAssetId", label: "Cover image", type: "asset", accept: "image" },
         { name: "technologyIds", label: "Technologies", type: "multiselect", options: techs.map((t) => ({ value: t.id, label: t.name })), help: "Manage the list under Technologies." },
+        {
+          name: "galleryAssetIds",
+          label: "Gallery images",
+          type: "multiselect",
+          options: images.map((a) => ({ value: a.id, label: a.altText || a.fileName, thumb: mediaUrl(a.objectKey) })),
+          help: "Screenshots and documentation shown after the cover in the project page carousel. They appear in upload order; upload them in Media first.",
+        },
         order,
         { name: "featured", label: "Feature on the home page", type: "checkbox" },
       ];
@@ -73,8 +84,17 @@ export const ENTITIES: Record<string, EntityConfig> = {
         })
       ).map((p) => ({ id: p.id, status: p.status, previewHref: `/projects/${p.slug}?preview=1`, cells: [p.title, p.projectType, p.featured ? "Yes" : "", p.updatedAt.toISOString().slice(0, 10)] })),
     load: async (id) => {
-      const p = await prisma.project.findUnique({ where: { id }, include: { technologies: true } });
-      return p && { ...p, startDate: toDateInput(p.startDate), endDate: toDateInput(p.endDate), sortOrder: String(p.sortOrder), technologyIds: p.technologies.map((t) => t.technologyId) };
+      const p = await prisma.project.findUnique({ where: { id }, include: { technologies: true, gallery: { orderBy: { sortOrder: "asc" } } } });
+      return (
+        p && {
+          ...p,
+          startDate: toDateInput(p.startDate),
+          endDate: toDateInput(p.endDate),
+          sortOrder: String(p.sortOrder),
+          technologyIds: p.technologies.map((t) => t.technologyId),
+          galleryAssetIds: p.gallery.map((g) => g.assetId),
+        }
+      );
     },
   },
   technologies: {

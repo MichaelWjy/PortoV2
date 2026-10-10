@@ -55,7 +55,13 @@ function notFound(entity: string): never {
 // Projects -------------------------------------------------------------------
 
 export async function saveProject(id: string | null, input: z.output<typeof projectSchema>, actorId: string) {
-  const { technologyIds, ...data } = input;
+  const { technologyIds, galleryAssetIds, ...data } = input;
+  const galleryIds = [...new Set(galleryAssetIds)];
+  if (galleryIds.length) {
+    const images = await prisma.mediaAsset.count({ where: { id: { in: galleryIds }, mimeType: { startsWith: "image/" } } });
+    if (images !== galleryIds.length) throw new ServiceError("Gallery items must be images.");
+  }
+  const gallery = { create: galleryIds.map((assetId, sortOrder) => ({ assetId, sortOrder })) };
   const before = id ? ((await prisma.project.findUnique({ where: { id }, select: { status: true, publishedAt: true } })) ?? notFound("Project")) : null;
   const publishedAt = nextPublishedAt(data.status, before?.publishedAt);
   const technologies = { create: [...new Set(technologyIds)].map((technologyId) => ({ technologyId })) };
@@ -65,8 +71,8 @@ export async function saveProject(id: string | null, input: z.output<typeof proj
     lifecycleAction(before?.status, data.status, !id),
     (tx) =>
       id
-        ? tx.project.update({ where: { id }, data: { ...data, publishedAt, technologies: { deleteMany: {}, ...technologies } } })
-        : tx.project.create({ data: { ...data, publishedAt, technologies } }),
+        ? tx.project.update({ where: { id }, data: { ...data, publishedAt, technologies: { deleteMany: {}, ...technologies }, gallery: { deleteMany: {}, ...gallery } } })
+        : tx.project.create({ data: { ...data, publishedAt, technologies, gallery } }),
     (p) => p.title,
   );
 }

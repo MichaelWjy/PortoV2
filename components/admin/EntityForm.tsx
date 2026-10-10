@@ -69,8 +69,13 @@ export function EntityForm({ fields, values, action, id, submitLabel = "Save", a
             <legend className="sr-only">{f.label}</legend>
             {f.options.length === 0 && <span className="adm-muted">Nothing to choose yet.</span>}
             {f.options.map((o) => (
-              <label key={o.value}>
-                <input type="checkbox" name={f.name} value={o.value} defaultChecked={selected.has(o.value)} /> {o.label}
+              <label key={o.value} className={o.thumb ? "adm-thumb-option" : undefined}>
+                <input type="checkbox" name={f.name} value={o.value} defaultChecked={selected.has(o.value)} />
+                {o.thumb && (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail of a managed asset
+                  <img src={o.thumb} alt="" loading="lazy" />
+                )}
+                {o.label}
               </label>
             ))}
           </fieldset>

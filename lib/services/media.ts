@@ -77,6 +77,7 @@ export async function assetUsage(id: string) {
       profileResume: { select: { id: true } },
       profileAboutImages: { select: { id: true } },
       projectCovers: { select: { title: true } },
+      projectGallery: { select: { project: { select: { title: true } } } },
       milestones: { select: { title: true } },
       certifications: { select: { name: true } },
     },
@@ -87,6 +88,7 @@ export async function assetUsage(id: string) {
     ...asset.profileResume.map(() => "Profile résumé"),
     ...asset.profileAboutImages.map(() => "About photo"),
     ...asset.projectCovers.map((p) => `Project cover: ${p.title}`),
+    ...asset.projectGallery.map((g) => `Project gallery: ${g.project.title}`),
     ...asset.milestones.map((m) => `Milestone image: ${m.title}`),
     ...asset.certifications.map((c) => `Certification: ${c.name}`),
   ];

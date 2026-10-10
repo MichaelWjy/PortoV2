@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -8,6 +7,7 @@ import { getAdmin } from "@/lib/auth/guard";
 import { slug as slugSchema } from "@/lib/validation/schemas";
 import { PublicShell } from "@/components/portfolio/PublicShell";
 import { PageView } from "@/components/portfolio/PageView";
+import { ProjectGallery } from "@/components/portfolio/ProjectGallery";
 
 type Props = PageProps<"/projects/[slug]">;
 
@@ -45,6 +45,8 @@ function Section({ title, text }: { title: string; text: string | null }) {
 export default async function ProjectPage(props: Props) {
   const [{ project, preview }, content] = await Promise.all([load(props), getHomeContent()]);
   if (!project) notFound();
+  // Cover first, then gallery images; an image picked as both appears once.
+  const slides = [project.cover, ...project.gallery].filter((img, i, all): img is NonNullable<typeof img> => !!img && all.findIndex((o) => o?.url === img.url) === i);
 
   return (
     <PublicShell content={content} base="/">
@@ -59,17 +61,17 @@ export default async function ProjectPage(props: Props) {
         <p className="lead" style={{ maxWidth: "60ch" }}>
           {project.shortDescription}
         </p>
-        <div className="cover">
-          {project.cover ? (
-            <Image src={project.cover.url} alt={project.cover.alt} fill priority sizes="(max-width: 1240px) 100vw, 1240px" />
-          ) : (
+        {slides.length > 0 ? (
+          <ProjectGallery images={slides} title={project.title} />
+        ) : (
+          <div className="cover">
             <div className="pc" style={{ border: 0, background: "none", height: "100%" }}>
               <div className="im" style={{ height: "100%", aspectRatio: "auto" }}>
                 <div className="ph" style={{ width: "14%" }} aria-hidden="true" />
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         <dl className="meta">
           <div>
             <dt className="mono">Type</dt>
