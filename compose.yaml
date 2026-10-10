@@ -1,0 +1,70 @@
+# Production stack for a single Ubuntu VPS. See docs/DEPLOYMENT.md.
+#   docker compose --env-file .env.production up -d --build
+# The app listens on 127.0.0.1:3000 only; Nginx terminates TLS in front of it.
+# PostgreSQL is on an internal network and never published.
+
+name: porto
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-porto}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Applies pending migrations, then exits. The app waits for it to succeed. Never resets or seeds.
+  migrate:
+    build: { context: ., target: tools }
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-porto}?schema=public
+    command: ["npm", "run", "db:deploy"]
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [internal]
+    restart: "no"
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-porto}?schema=public
+      LOCAL_STORAGE_DIR: /app/storage/uploads
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - uploads:/app/storage/uploads
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [internal, web]
+    stop_grace_period: 20s
+
+  # One-off jobs, e.g. docker compose run --rm tools npm run admin -- add you@tenant.example
+  tools:
+    build: { context: ., target: tools }
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-porto}?schema=public
+    networks: [internal]
+    profiles: [tools]
+
+volumes:
+  db-data:
+  uploads:
+
+networks:
+  internal:
+    internal: true
+  web:

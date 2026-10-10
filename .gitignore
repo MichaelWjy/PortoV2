@@ -12,30 +12,59 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # next.js
 /.next/
 /out/
+next-env.d.ts
 
 # production
 /build
 
-# misc
-.DS_Store
-*.pem
+# generated Prisma client (rebuilt by `npm install` / `prisma generate`)
+/generated/
 
-# debug
+# typescript
+*.tsbuildinfo
+
+# env files: secrets stay local; only the placeholder template is committed
+.env*
+!.env.example
+
+# keys and certificates (the Supabase root CA in /certs is public and stays committed)
+*.pem
+*.key
+
+# local media uploads and backups
+/storage/
+*.dump
+*.sql.gz
+
+# documentation: all Markdown is kept locally only (README, AGENTS, CLAUDE, SKILLS, docs/)
+*.md
+
+# AI agent tooling and local design artifacts
+/.claude/
+/.impeccable/
+skills-lock.json
+
+# deployment platforms
+.vercel
+
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

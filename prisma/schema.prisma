@@ -1,0 +1,357 @@
+// Portfolio platform schema. See docs/DATABASE.md for relationships and rules.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum MessageStatus {
+  NEW
+  READ
+  ARCHIVED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  LIMITED
+  UNAVAILABLE
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  PROJECT_VIEW
+  MILESTONE_VIEW
+}
+
+/// Authorized administrators. Identity comes from Google sign-in; no passwords are stored.
+model User {
+  id              String    @id @default(cuid())
+  /// The sign-in provider's stable account ID (Google `sub`). Null until the allow-listed account first signs in.
+  /// Mapped to the original column name, so switching providers needed no data migration.
+  providerSubject String?   @unique @map("entraObjectId")
+  email           String    @unique
+  name            String?
+  role            Role      @default(ADMIN)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  uploads   MediaAsset[]
+  auditLogs AuditLog[]
+}
+
+/// Singleton (id = "profile").
+model Profile {
+  id                  String             @id @default("profile")
+  fullName            String
+  professionalTitle   String
+  location            String
+  shortBio            String
+  longBio             String?
+  email               String?
+  availabilityStatus  AvailabilityStatus @default(AVAILABLE)
+  profileImageAssetId String?
+  profileImage        MediaAsset?        @relation("ProfileImage", fields: [profileImageAssetId], references: [id], onDelete: Restrict)
+  /// Optional separate photo for the About section; falls back to the portrait.
+  aboutImageAssetId   String?
+  aboutImage          MediaAsset?        @relation("ProfileAboutImage", fields: [aboutImageAssetId], references: [id], onDelete: Restrict)
+  resumeAssetId       String?
+  resume              MediaAsset?        @relation("ProfileResume", fields: [resumeAssetId], references: [id], onDelete: Restrict)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+/// Singleton (id = "site"). Editable copy for every public section.
+model SiteSettings {
+  id                     String   @id @default("site")
+  navWorkLabel           String   @default("Work")
+  navAboutLabel          String   @default("About")
+  navExperienceLabel     String   @default("Experience")
+  navContactLabel        String   @default("Contact")
+  availabilityLabel      String   @default("Available")
+  heroEyebrow            String
+  /// Line breaks are preserved when rendered.
+  heroHeadline           String
+  heroDescription        String
+  heroPrimaryCtaLabel    String
+  heroSecondaryCtaLabel  String
+  journeyEyebrow         String
+  journeyHeadline        String
+  journeyDescription     String
+  projectsHeadline       String
+  projectsDescription    String
+  aboutHeadline          String
+  skillsHeadline         String   @default("Skills.")
+  experienceHeadline     String
+  certificationsHeadline String   @default("Certifications.")
+  contactHeadline        String
+  contactDescription     String
+  footerHeadline         String
+  footerNote             String
+  seoTitle               String
+  seoDescription         String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  title            String
+  slug             String        @unique
+  /// Short label shown on cards, e.g. "Full Stack Web Application".
+  projectType      String
+  shortDescription String
+  description      String
+  problemStatement String?
+  solution         String?
+  role             String?
+  startDate        DateTime?     @db.Date
+  endDate          DateTime?     @db.Date
+  repositoryUrl    String?
+  liveUrl          String?
+  coverAssetId     String?
+  cover            MediaAsset?   @relation("ProjectCover", fields: [coverAssetId], references: [id], onDelete: Restrict)
+  featured         Boolean       @default(false)
+  status           ContentStatus @default(DRAFT)
+  sortOrder        Int           @default(0)
+  publishedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  technologies    ProjectTechnology[]
+  milestones      Milestone[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@index([status, sortOrder])
+}
+
+model Technology {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  category  String?
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects ProjectTechnology[]
+}
+
+model ProjectTechnology {
+  projectId    String
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technologyId String
+  technology   Technology @relation(fields: [technologyId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, technologyId])
+  @@index([technologyId])
+}
+
+model Experience {
+  id             String        @id @default(cuid())
+  organization   String
+  position       String
+  employmentType String?
+  location       String?
+  description    String?
+  achievements   String[]      @default([])
+  startDate      DateTime?     @db.Date
+  endDate        DateTime?     @db.Date
+  isCurrent      Boolean       @default(false)
+  sortOrder      Int           @default(0)
+  status         ContentStatus @default(DRAFT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  milestones Milestone[]
+
+  @@index([status, sortOrder])
+}
+
+model Education {
+  id           String        @id @default(cuid())
+  institution  String
+  degree       String?
+  fieldOfStudy String?
+  location     String?
+  description  String?
+  startDate    DateTime?     @db.Date
+  endDate      DateTime?     @db.Date
+  isCurrent    Boolean       @default(false)
+  sortOrder    Int           @default(0)
+  status       ContentStatus @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+model Skill {
+  id          String        @id @default(cuid())
+  name        String
+  category    String
+  description String?
+  sortOrder   Int           @default(0)
+  status      ContentStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([category, name])
+  @@index([status, category, sortOrder])
+}
+
+/// A stop on the interactive journey map.
+model Milestone {
+  id                  String        @id @default(cuid())
+  title               String
+  slug                String        @unique
+  /// Short kicker shown above the title, e.g. "Education".
+  category            String
+  shortDescription    String
+  description         String?
+  tags                String[]      @default([])
+  startDate           DateTime?     @db.Date
+  endDate             DateTime?     @db.Date
+  locationLabel       String?
+  /// Position along the road, 0 (start) to 1 (end). See docs/INTERACTIVE_ROADMAP.md.
+  /// Illustration on the map pad: school, campus, code, office, trophy, rocket, flag.
+  landmark            String        @default("flag")
+  routePosition       Float
+  relatedProjectId    String?
+  relatedProject      Project?      @relation(fields: [relatedProjectId], references: [id], onDelete: SetNull)
+  relatedExperienceId String?
+  relatedExperience   Experience?   @relation(fields: [relatedExperienceId], references: [id], onDelete: SetNull)
+  imageAssetId        String?
+  image               MediaAsset?   @relation("MilestoneImage", fields: [imageAssetId], references: [id], onDelete: Restrict)
+  status              ContentStatus @default(DRAFT)
+  sortOrder           Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([status, routePosition])
+}
+
+/// Professional certifications and course credentials. Never invented: entered by the owner.
+model Certification {
+  id            String        @id @default(cuid())
+  name          String
+  issuer        String
+  issueDate     DateTime?     @db.Date
+  expiryDate    DateTime?     @db.Date
+  credentialId  String?
+  credentialUrl String?
+  description   String?
+  imageAssetId  String?
+  image         MediaAsset?   @relation("CertificationImage", fields: [imageAssetId], references: [id], onDelete: Restrict)
+  sortOrder     Int           @default(0)
+  status        ContentStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+model SocialLink {
+  id        String   @id @default(cuid())
+  platform  String
+  label     String
+  url       String
+  /// Short glyph shown in the round icon, e.g. "in", "gh", "@".
+  icon      String?
+  sortOrder Int      @default(0)
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isVisible, sortOrder])
+}
+
+/// Metadata for files kept in object storage. Binary data never goes in PostgreSQL.
+model MediaAsset {
+  id           String   @id @default(cuid())
+  fileName     String
+  /// Immutable, server-generated key. Replacing a file writes a new key.
+  objectKey    String   @unique
+  mimeType     String
+  fileSize     Int
+  width        Int?
+  height       Int?
+  altText      String   @default("")
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profileImages      Profile[]       @relation("ProfileImage")
+  profileAboutImages Profile[]       @relation("ProfileAboutImage")
+  profileResume      Profile[]       @relation("ProfileResume")
+  projectCovers      Project[]       @relation("ProjectCover")
+  milestones         Milestone[]     @relation("MilestoneImage")
+  certifications     Certification[] @relation("CertificationImage")
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  status    MessageStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+/// Privacy-minimal analytics: no IP, no user agent, no cookies. See docs/SECURITY.md#privacy.
+model AnalyticsEvent {
+  id             String             @id @default(cuid())
+  eventType      AnalyticsEventType
+  path           String
+  projectId      String?
+  project        Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// Hash of (IP, user agent, day, secret salt). Rotates daily, so visitors cannot be tracked across days.
+  visitorHash    String
+  referrerDomain String?
+  createdAt      DateTime           @default(now())
+
+  @@index([createdAt])
+  @@index([eventType, createdAt])
+}
+
+/// Fixed-window counters for rate limiting. Stored in PostgreSQL so limits hold across restarts and instances.
+model RateLimitBucket {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+
+  @@index([windowStart])
+}

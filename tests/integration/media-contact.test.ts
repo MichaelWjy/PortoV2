@@ -1,0 +1,97 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T) => fn, revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
+
+import { prisma } from "@/lib/db";
+import { storage } from "@/lib/storage/drivers";
+import { deleteAsset, replaceAsset, uploadAsset } from "@/lib/services/media";
+import { saveProfile, saveProject } from "@/lib/services/content";
+import { createContactMessage } from "@/lib/services/contact";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { profileSchema, projectSchema } from "@/lib/validation/schemas";
+import { createAdmin, resetDatabase } from "../support/db";
+
+// 1x1 transparent PNG.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+const png = (name = "photo.png") => new File([PNG], name, { type: "image/png" });
+
+let actor: string;
+beforeEach(async () => {
+  await resetDatabase();
+  actor = (await createAdmin()).id;
+});
+
+describe("media library", () => {
+  it("stores the file in object storage and only metadata in PostgreSQL", async () => {
+    const asset = await uploadAsset(png("../../evil name.png"), "A photo", actor);
+    expect(asset.objectKey).toMatch(/^[0-9a-f-]{36}\.png$/);
+    expect(asset.fileName).not.toContain("/");
+    expect([asset.width, asset.height]).toEqual([1, 1]);
+    expect(await storage().get(asset.objectKey)).not.toBeNull();
+  });
+
+  it("rejects files whose content is not an allowed type, whatever their name", async () => {
+    const fake = new File(["<svg onload=alert(1)></svg>"], "image.png", { type: "image/png" });
+    await expect(uploadAsset(fake, "", actor)).rejects.toThrow(/Unsupported file type/);
+    expect(await prisma.mediaAsset.count()).toBe(0);
+  });
+
+  it("refuses to delete an asset that a project uses", async () => {
+    const asset = await uploadAsset(png(), "", actor);
+    await saveProject(null, projectSchema.parse({ title: "P", slug: "p", projectType: "t", shortDescription: "s", description: "d", status: "DRAFT", coverAssetId: asset.id }), actor);
+    await expect(deleteAsset(asset.id, actor)).rejects.toThrow(/Project cover: P/);
+  });
+
+  it("replaces a file in place and removes the old object", async () => {
+    const asset = await uploadAsset(png(), "", actor);
+    const replaced = await replaceAsset(asset.id, png("new.png"), actor);
+    expect(replaced.id).toBe(asset.id);
+    expect(replaced.objectKey).not.toBe(asset.objectKey);
+    expect(await storage().get(asset.objectKey)).toBeNull();
+  });
+
+  it("deletes unused assets and their objects", async () => {
+    const asset = await uploadAsset(png(), "", actor);
+    await deleteAsset(asset.id, actor);
+    expect(await storage().get(asset.objectKey)).toBeNull();
+    expect(await prisma.auditLog.count({ where: { entityType: "MediaAsset", action: "delete" } })).toBe(1);
+  });
+});
+
+describe("profile CV", () => {
+  const PDF = Buffer.from("%PDF-1.7 minimal test document %%EOF");
+  const profile = (over: Record<string, unknown>) =>
+    profileSchema.parse({ fullName: "Michael Wijaya", professionalTitle: "Software Engineer", location: "Indonesia", shortBio: "Bio", availabilityStatus: "AVAILABLE", ...over });
+
+  it("accepts a PDF as the CV and exposes it for download", async () => {
+    const cv = await uploadAsset(new File([PDF], "cv.pdf", { type: "application/pdf" }), "", actor);
+    await saveProfile(profile({ resumeAssetId: cv.id }), actor);
+    expect((await prisma.profile.findUnique({ where: { id: "profile" } }))?.resumeAssetId).toBe(cv.id);
+    await expect(deleteAsset(cv.id, actor)).rejects.toThrow(/résumé/);
+  });
+
+  it("refuses an image as the CV and a PDF as the portrait", async () => {
+    const img = await uploadAsset(png(), "", actor);
+    const cv = await uploadAsset(new File([PDF], "cv.pdf", { type: "application/pdf" }), "", actor);
+    await expect(saveProfile(profile({ resumeAssetId: img.id }), actor)).rejects.toThrow(/CV must be a PDF/);
+    await expect(saveProfile(profile({ profileImageAssetId: cv.id }), actor)).rejects.toThrow(/portrait must be an image/);
+  });
+});
+
+describe("contact messages and rate limiting", () => {
+  it("persists a validated message", async () => {
+    await createContactMessage({ name: "Ada", email: "ada@example.test", subject: null, message: "Hello there, nice site!" });
+    const [m] = await prisma.contactMessage.findMany();
+    expect(m).toMatchObject({ name: "Ada", status: "NEW" });
+  });
+
+  it("allows up to the limit per window, then blocks, then resets in the next window", async () => {
+    const rule = { limit: 3, windowMs: 60_000 };
+    const t = 1_000_000_000;
+    const results = [];
+    for (let i = 0; i < 4; i++) results.push(await consumeRateLimit("test:key", rule, t));
+    expect(results).toEqual([true, true, true, false]);
+    expect(await consumeRateLimit("test:key", rule, t + 60_000)).toBe(true);
+    expect(await consumeRateLimit("test:other", rule, t)).toBe(true);
+  });
+});
