@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -16,6 +17,20 @@ const SECTIONS = ["work", "about", "experience", "contact"] as const;
 export function SiteNav({ labels, availability, base }: Props) {
   const [active, setActive] = useState<string | null>(null);
   const [overMap, setOverMap] = useState(false);
+  // Small screens only: the links fold into a menu behind the burger button.
+  const [open, setOpen] = useState(false);
+  const burger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      burger.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   useEffect(() => {
     const map = document.getElementById("journey");
@@ -46,15 +61,21 @@ export function SiteNav({ labels, availability, base }: Props) {
   );
 
   return (
-    <nav className={`nav ${overMap ? "over-map" : ""}`} aria-label="Main">
+    <nav className={`nav ${overMap ? "over-map" : ""} ${open ? "menu-open" : ""}`} aria-label="Main">
       <a href={base || "#top"} className="logo" aria-label="MW, back to top">
         <Logo />
       </a>
-      <div className="links mono">
+      <div id="site-menu" className={`links mono ${open ? "open" : ""}`} onClick={(e) => (e.target as HTMLElement).closest("a") && setOpen(false)}>
         {link("work", labels.work)}
         {link("about", labels.about)}
         {link("experience", labels.experience)}
         {link("contact", labels.contact)}
+        {availability && availability.status !== "UNAVAILABLE" && (
+          <span className={`av mono menu-av ${availability.status === "LIMITED" ? "limited" : ""}`}>
+            <i aria-hidden="true" />
+            {availability.label}
+          </span>
+        )}
       </div>
       <div className="nav-end">
         {availability && availability.status !== "UNAVAILABLE" ? (
@@ -64,6 +85,10 @@ export function SiteNav({ labels, availability, base }: Props) {
           </span>
         ) : null}
         <ThemeToggle />
+        <button ref={burger} type="button" className="burger" aria-expanded={open} aria-controls="site-menu" onClick={() => setOpen((o) => !o)}>
+          {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+        </button>
       </div>
     </nav>
   );

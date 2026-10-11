@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ENTITIES } from "@/lib/admin/registry";
 import { deleteRecord, setProjectStatus } from "../actions";
-import { Empty, PageHeader, Saved, StatusBadge } from "@/components/admin/ui";
+import { Empty, PageHeader, Pager, pageParam, Saved, StatusBadge } from "@/components/admin/ui";
+
+const PAGE_SIZE = 25;
 import { RecordButton } from "@/components/admin/RecordButton";
 
 export default async function EntityListPage({ params, searchParams }: PageProps<"/admin/[entity]">) {
@@ -12,7 +14,12 @@ export default async function EntityListPage({ params, searchParams }: PageProps
   const sp = await searchParams;
   const search = typeof sp.q === "string" ? sp.q.slice(0, 100) : undefined;
   const status = typeof sp.status === "string" ? sp.status : undefined;
-  const rows = await config.list({ search, status });
+  const all = await config.list({ search, status });
+  // ponytail: content tables hold tens of rows, so the list loads fully and is sliced here; move skip/take into config.list if one grows to thousands.
+  const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  const page = Math.min(pageParam(sp.page), pages);
+  const rows = all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const href = (n: number) => `/admin/${entity}?${new URLSearchParams({ ...(search ? { q: search } : {}), ...(status ? { status } : {}), page: String(n) })}`;
 
   return (
     <>
@@ -78,6 +85,7 @@ export default async function EntityListPage({ params, searchParams }: PageProps
           </table>
         </div>
       )}
+      <Pager page={page} pages={pages} href={href} />
     </>
   );
 }

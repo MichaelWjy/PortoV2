@@ -1,13 +1,12 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
-import { Empty, PageHeader } from "@/components/admin/ui";
+import { Empty, PageHeader, Pager, pageParam } from "@/components/admin/ui";
 
 export const metadata = { title: "Audit log" };
 const PAGE_SIZE = 50;
 
 export default async function AuditLogPage({ searchParams }: PageProps<"/admin/audit-logs">) {
-  const page = Math.max(1, Number((await searchParams).page) || 1);
+  const page = pageParam((await searchParams).page);
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE, include: { actor: { select: { email: true } } } }),
     prisma.auditLog.count(),
@@ -48,23 +47,7 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/admin/a
           </table>
         </div>
       )}
-      {pages > 1 && (
-        <nav className="adm-filters" aria-label="Pagination" style={{ marginTop: 16 }}>
-          {page > 1 && (
-            <Link className="adm-btn adm-btn-sm" href={`/admin/audit-logs?page=${page - 1}`}>
-              ← Newer
-            </Link>
-          )}
-          <span className="adm-muted">
-            Page {page} of {pages}
-          </span>
-          {page < pages && (
-            <Link className="adm-btn adm-btn-sm" href={`/admin/audit-logs?page=${page + 1}`}>
-              Older →
-            </Link>
-          )}
-        </nav>
-      )}
+      <Pager page={page} pages={pages} href={(n) => `/admin/audit-logs?page=${n}`} prev="← Newer" next="Older →" />
     </>
   );
 }

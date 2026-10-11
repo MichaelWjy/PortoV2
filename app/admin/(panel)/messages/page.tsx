@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
-import { Empty, PageHeader, StatusBadge } from "@/components/admin/ui";
+import { Empty, PageHeader, Pager, pageParam, StatusBadge } from "@/components/admin/ui";
 import { RecordButton } from "@/components/admin/RecordButton";
 import { deleteAllMessages, deleteRecord, setMessageStatus } from "../actions";
 
@@ -12,7 +12,7 @@ const PAGE_SIZE = 20;
 export default async function MessagesPage({ searchParams }: PageProps<"/admin/messages">) {
   const sp = await searchParams;
   const status = sp.status === "NEW" || sp.status === "READ" || sp.status === "ARCHIVED" ? sp.status : undefined;
-  const page = Math.max(1, Number(sp.page) || 1);
+  const page = pageParam(sp.page);
   const where: Prisma.ContactMessageWhereInput = status ? { status } : { status: { not: "ARCHIVED" } };
   const [messages, total, allCount] = await Promise.all([
     prisma.contactMessage.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
@@ -76,23 +76,7 @@ export default async function MessagesPage({ searchParams }: PageProps<"/admin/m
           ))}
         </div>
       )}
-      {pages > 1 && (
-        <nav className="adm-filters" aria-label="Pagination" style={{ marginTop: 16 }}>
-          {page > 1 && (
-            <Link className="adm-btn adm-btn-sm" href={href(page - 1)}>
-              ← Newer
-            </Link>
-          )}
-          <span className="adm-muted">
-            Page {page} of {pages}
-          </span>
-          {page < pages && (
-            <Link className="adm-btn adm-btn-sm" href={href(page + 1)}>
-              Older →
-            </Link>
-          )}
-        </nav>
-      )}
+      <Pager page={page} pages={pages} href={href} prev="← Newer" next="Older →" />
     </>
   );
 }

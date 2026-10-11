@@ -4,6 +4,7 @@ import { startTransition, useActionState, useState } from "react";
 import { initialFormState, type FormState } from "@/lib/admin/form-state";
 import type { AssetOption, Field, RouteStop, Values } from "./fields";
 import { RouteEditor } from "./RouteEditor";
+import { AssetPicker } from "./AssetPicker";
 
 type Props = {
   fields: Field[];
@@ -63,18 +64,28 @@ export function EntityForm({ fields, values, action, id, submitLabel = "Save", a
           </select>
         );
       case "multiselect": {
+        // Image choices (project gallery) get the searchable thumbnail picker.
+        if (f.options.some((o) => o.thumb)) {
+          return (
+            <AssetPicker
+              name={f.name}
+              inputId={`f-${f.name}`}
+              label={f.label}
+              multiple
+              items={f.options.map((o) => ({ value: o.value, label: o.label, thumb: o.thumb }))}
+              defaultValue={Array.isArray(values[f.name]) ? (values[f.name] as string[]) : []}
+              describedBy={describedBy(f)}
+            />
+          );
+        }
         const selected = new Set(Array.isArray(values[f.name]) ? (values[f.name] as string[]) : []);
         return (
           <fieldset className="adm-checks" aria-describedby={describedBy(f)}>
             <legend className="sr-only">{f.label}</legend>
             {f.options.length === 0 && <span className="adm-muted">Nothing to choose yet.</span>}
             {f.options.map((o) => (
-              <label key={o.value} className={o.thumb ? "adm-thumb-option" : undefined}>
+              <label key={o.value}>
                 <input type="checkbox" name={f.name} value={o.value} defaultChecked={selected.has(o.value)} />
-                {o.thumb && (
-                  // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail of a managed asset
-                  <img src={o.thumb} alt="" loading="lazy" />
-                )}
                 {o.label}
               </label>
             ))}
@@ -83,21 +94,17 @@ export function EntityForm({ fields, values, action, id, submitLabel = "Save", a
       }
       case "asset": {
         const options = assets.filter((a) => (f.accept === "any" ? true : f.accept === "pdf" ? a.url.endsWith(".pdf") : a.isImage));
-        const current = options.find((a) => a.id === live[f.name]);
         return (
           <div className="adm-asset">
-            <select className="adm-input" defaultValue={str(values[f.name])} {...common(f)}>
-              <option value="">No file</option>
-              {options.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-            {current?.isImage && (
-              // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail of a managed asset
-              <img src={current.url} alt="" />
-            )}
+            <AssetPicker
+              name={f.name}
+              inputId={`f-${f.name}`}
+              label={f.label}
+              items={options.map((a) => ({ value: a.id, label: a.label, thumb: a.isImage ? a.url : undefined }))}
+              defaultValue={[str(values[f.name])]}
+              describedBy={describedBy(f)}
+              onChange={(v) => set(f.name, v)}
+            />
             <a href="/admin/media" className="adm-link" target="_blank">
               Upload or manage files ↗
             </a>

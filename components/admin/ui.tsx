@@ -32,3 +32,28 @@ export function Saved({ show }: { show: boolean }) {
     </p>
   ) : null;
 }
+
+/** Previous/next links for server-paginated admin lists. `href(n)` builds the URL of page n, keeping filters. */
+export function Pager({ page, pages, href, prev = "← Previous", next = "Next →" }: { page: number; pages: number; href: (n: number) => string; prev?: string; next?: string }) {
+  if (pages <= 1) return null;
+  return (
+    <nav className="adm-filters" aria-label="Pagination" style={{ marginTop: 16 }}>
+      {page > 1 && (
+        <Link className="adm-btn adm-btn-sm" href={href(page - 1)}>
+          {prev}
+        </Link>
+      )}
+      <span className="adm-muted" aria-current="page">
+        Page {page} of {pages}
+      </span>
+      {page < pages && (
+        <Link className="adm-btn adm-btn-sm" href={href(page + 1)}>
+          {next}
+        </Link>
+      )}
+    </nav>
+  );
+}
+
+/** Reads ?page= safely: a positive whole number, otherwise 1. */
+export const pageParam = (v: string | string[] | undefined) => Math.max(1, Math.floor(Number(v)) || 1);
