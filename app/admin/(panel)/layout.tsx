@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth/guard";
+import { AdminMenu } from "@/components/admin/AdminMenu";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { Logo } from "@/components/portfolio/Logo";
 import { ThemeToggle } from "@/components/portfolio/ThemeToggle";
@@ -15,21 +16,26 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <div className="adm">
       <aside className="adm-side">
-        <div className="adm-head">
-          <a href="/" className="logo" target="_blank" rel="noopener" aria-label="MW, open the public site">
-            <Logo />
-          </a>
-          <ThemeToggle />
-        </div>
-        <AdminNav />
-        <div className="who">
-          <span>{admin.name ?? admin.email}</span>
-          <form action={signOutAction}>
-            <button className="adm-btn adm-btn-sm" type="submit">
-              Sign out
-            </button>
-          </form>
-        </div>
+        <AdminMenu
+          brand={
+            <>
+              <a href="/" className="logo" target="_blank" rel="noopener" aria-label="MW, open the public site">
+                <Logo />
+              </a>
+              <ThemeToggle />
+            </>
+          }
+        >
+          <AdminNav />
+          <div className="who">
+            <span>{admin.name ?? admin.email}</span>
+            <form action={signOutAction}>
+              <button className="adm-btn adm-btn-sm" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
+        </AdminMenu>
       </aside>
       <main className="adm-main">{children}</main>
     </div>

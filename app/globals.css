@@ -491,7 +491,12 @@ a { text-underline-offset: 4px; }
 /* Admin ------------------------------------------------------------------- */
 .adm { display: grid; grid-template-columns: 220px 1fr; min-height: 100svh; font-size: 14px; }
 .adm-side { border-right: 1px solid var(--line); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100svh; overflow-y: auto; }
-.adm-head { display: flex; align-items: center; justify-content: space-between; }
+.adm-brand { display: flex; align-items: center; gap: 4px; }
+.adm-brand .logo { margin-right: auto; }
+.adm-brand .theme-toggle { margin: -10px 0; }
+/* Wide screens: the menu wrapper is invisible to layout, so the sidebar's flex column is unchanged. */
+.adm-menu { display: contents; }
+.adm-burger { display: none; }
 .adm-side .logo { display: block; padding: 0 10px; }
 .adm-side .logo img { height: 26px; }
 .adm-side nav { display: grid; gap: 2px; }
@@ -572,7 +577,11 @@ textarea.adm-input { resize: vertical; }
 @media (max-width: 900px) {
   .adm { grid-template-columns: 1fr; }
   .adm-side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
-  .adm-side nav { display: flex; flex-wrap: wrap; }
+  .adm-side { padding: 14px 16px; gap: 0; }
+  .adm-burger { display: grid; place-items: center; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 50%; background: transparent; color: var(--ink); }
+  .adm-menu { display: none; }
+  .adm-menu.open { display: grid; gap: 20px; padding-top: 16px; }
+  .adm-side .who { margin-top: 0; }
   .adm-form-split { grid-template-columns: 1fr; }
   .adm-preview { position: static; }
 }
