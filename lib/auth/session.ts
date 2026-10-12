@@ -1,6 +1,15 @@
-/** Admin sessions end this many seconds after sign-in, whatever the activity; the admin then signs in again. */
+/**
+ * Admin session lifetimes.
+ * - The session cookie (Auth.js JWT) is short-lived: SESSION_MAX_AGE.
+ * - The refresh token (HttpOnly cookie, hashed in AdminSession) lives REFRESH_MAX_AGE from sign-in. While it is
+ *   valid, proxy.ts issues a new session cookie whenever the old one has expired. Signing out deletes it.
+ */
 export const SESSION_MAX_AGE = 10 * 60;
+export const REFRESH_MAX_AGE = 24 * 60 * 60;
+export const REFRESH_COOKIE = "mw-refresh";
 
-/** True while a session that started at `loginAt` (epoch seconds) is still inside its fixed lifetime. */
-export const sessionIsFresh = (loginAt: unknown, now = Date.now()) =>
-  typeof loginAt === "number" && now / 1000 - loginAt < SESSION_MAX_AGE;
+/** Auth.js names its cookie with the __Secure- prefix on HTTPS. */
+export const sessionCookieName = (secure: boolean) => (secure ? "__Secure-authjs.session-token" : "authjs.session-token");
+
+export const refreshCookieOptions = (secure: boolean) =>
+  ({ httpOnly: true, secure, sameSite: "lax", path: "/", maxAge: REFRESH_MAX_AGE }) as const;

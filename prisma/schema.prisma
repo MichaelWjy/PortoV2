@@ -52,6 +52,22 @@ model User {
 
   uploads   MediaAsset[]
   auditLogs AuditLog[]
+  sessions  AdminSession[]
+}
+
+/// One signed-in admin browser. Backs the 1-day refresh token that renews the 10-minute session cookie;
+/// signing out deletes the row, which ends the session everywhere it is used.
+model AdminSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the refresh token. The token itself exists only in the admin's HttpOnly cookie.
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 /// Singleton (id = "profile").
@@ -97,6 +113,7 @@ model SiteSettings {
   aboutHeadline          String
   skillsHeadline         String   @default("Skills.")
   experienceHeadline     String
+  educationHeadline      String   @default("Education.")
   certificationsHeadline String   @default("Certifications.")
   contactHeadline        String
   contactDescription     String

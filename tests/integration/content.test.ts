@@ -123,6 +123,17 @@ describe("experience", () => {
     expect(e.endDate).toBeNull();
     expect((await getHomeContent()).timeline[0].period).toBe("2026 – Present");
   });
+
+  it("keeps education in its own section, out of the work timeline", async () => {
+    await content.saveEducation(
+      null,
+      { institution: "BINUS University", degree: "Bachelor", fieldOfStudy: "Computer Science", gpa: "3.85 / 4.00", location: null, description: null, startDate: null, endDate: null, isCurrent: true, status: "PUBLISHED", sortOrder: 0 },
+      actor,
+    );
+    const home = await getHomeContent();
+    expect(home.timeline).toHaveLength(0);
+    expect(home.education.map((e) => [e.title, e.subtitle])).toEqual([["BINUS University", "Bachelor, Computer Science · GPA 3.85 / 4.00"]]);
+  });
 });
 
 describe("certifications", () => {

@@ -11,21 +11,52 @@ import { isLandmark } from "@/lib/roadmap/landmarks";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-type AssetRow = { objectKey: string; altText: string; width: number | null; height: number | null } | null;
-export type PublicImage = { url: string; alt: string; width: number | null; height: number | null };
-const image = (a: AssetRow): PublicImage | null => (a ? { url: mediaUrl(a.objectKey), alt: a.altText, width: a.width, height: a.height } : null);
+type AssetRow = {
+  objectKey: string;
+  altText: string;
+  width: number | null;
+  height: number | null;
+} | null;
+export type PublicImage = {
+  url: string;
+  alt: string;
+  width: number | null;
+  height: number | null;
+};
+const image = (a: AssetRow): PublicImage | null =>
+  a
+    ? {
+        url: mediaUrl(a.objectKey),
+        alt: a.altText,
+        width: a.width,
+        height: a.height,
+      }
+    : null;
 
-const assetSelect = { select: { objectKey: true, altText: true, width: true, height: true } } as const;
+const assetSelect = {
+  select: { objectKey: true, altText: true, width: true, height: true },
+} as const;
 
 const projectInclude = {
   cover: assetSelect,
   gallery: { orderBy: { sortOrder: "asc" }, select: { asset: assetSelect } },
-  technologies: { select: { technology: { select: { name: true, slug: true } } }, orderBy: { technology: { name: "asc" } } },
+  technologies: {
+    select: { technology: { select: { name: true, slug: true } } },
+    orderBy: { technology: { name: "asc" } },
+  },
 } as const;
 
 type ProjectRow = Awaited<ReturnType<typeof findProjects>>[number];
-function findProjects(where: { featured?: boolean; slug?: string; status?: "PUBLISHED" }) {
-  return prisma.project.findMany({ where, include: projectInclude, orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }] });
+function findProjects(where: {
+  featured?: boolean;
+  slug?: string;
+  status?: "PUBLISHED";
+}) {
+  return prisma.project.findMany({
+    where,
+    include: projectInclude,
+    orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+  });
 }
 
 function toProject(p: ProjectRow) {
@@ -45,7 +76,9 @@ function toProject(p: ProjectRow) {
     featured: p.featured,
     status: p.status,
     cover: image(p.cover),
-    gallery: p.gallery.map((g) => image(g.asset)).filter((g): g is PublicImage => g !== null),
+    gallery: p.gallery
+      .map((g) => image(g.asset))
+      .filter((g): g is PublicImage => g !== null),
     technologies: p.technologies.map((t) => t.technology),
     publishedAt: iso(p.publishedAt),
     updatedAt: p.updatedAt.toISOString(),
@@ -54,31 +87,85 @@ function toProject(p: ProjectRow) {
 export type PublicProject = ReturnType<typeof toProject>;
 
 async function loadHome() {
-  const [settings, profile, projects, skills, experiences, education, milestones, socialLinks, certifications] = await Promise.all([
+  const [
+    settings,
+    profile,
+    projects,
+    skills,
+    experiences,
+    education,
+    milestones,
+    socialLinks,
+    certifications,
+  ] = await Promise.all([
     prisma.siteSettings.findUnique({ where: { id: "site" } }),
-    prisma.profile.findUnique({ where: { id: "profile" }, include: { profileImage: assetSelect, aboutImage: assetSelect, resume: assetSelect } }),
+    prisma.profile.findUnique({
+      where: { id: "profile" },
+      include: {
+        profileImage: assetSelect,
+        aboutImage: assetSelect,
+        resume: assetSelect,
+      },
+    }),
     findProjects({ status: "PUBLISHED", featured: true }),
-    prisma.skill.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
-    prisma.experience.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sortOrder: "asc" }, { startDate: "desc" }] }),
-    prisma.education.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sortOrder: "asc" }, { startDate: "desc" }] }),
+    prisma.skill.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    }),
+    prisma.experience.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: [{ sortOrder: "asc" }, { startDate: "desc" }],
+    }),
+    prisma.education.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: [{ sortOrder: "asc" }, { startDate: "desc" }],
+    }),
     prisma.milestone.findMany({
       where: { status: "PUBLISHED" },
       orderBy: [{ routePosition: "asc" }, { sortOrder: "asc" }],
       include: {
         image: assetSelect,
         relatedProject: { select: { slug: true, title: true, status: true } },
-        relatedExperience: { select: { organization: true, position: true, status: true } },
+        relatedExperience: {
+          select: { organization: true, position: true, status: true },
+        },
       },
     }),
-    prisma.socialLink.findMany({ where: { isVisible: true }, orderBy: [{ sortOrder: "asc" }, { platform: "asc" }] }),
-    prisma.certification.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sortOrder: "asc" }, { issueDate: "desc" }], include: { image: { select: { objectKey: true, altText: true, width: true, height: true, mimeType: true } } } }),
+    prisma.socialLink.findMany({
+      where: { isVisible: true },
+      orderBy: [{ sortOrder: "asc" }, { platform: "asc" }],
+    }),
+    prisma.certification.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: [{ sortOrder: "asc" }, { issueDate: "desc" }],
+      include: {
+        image: {
+          select: {
+            objectKey: true,
+            altText: true,
+            width: true,
+            height: true,
+            mimeType: true,
+          },
+        },
+      },
+    }),
   ]);
 
-  const skillGroups = new Map<string, { name: string; description: string | null }[]>();
-  for (const s of skills) skillGroups.set(s.category, [...(skillGroups.get(s.category) ?? []), { name: s.name, description: s.description }]);
+  const skillGroups = new Map<
+    string,
+    { name: string; description: string | null }[]
+  >();
+  for (const s of skills)
+    skillGroups.set(s.category, [
+      ...(skillGroups.get(s.category) ?? []),
+      { name: s.name, description: s.description },
+    ]);
 
   return {
-    settings: settings ? { ...settings, createdAt: undefined, updatedAt: undefined } : null,
+    settings: settings
+      ? { ...settings, createdAt: undefined, updatedAt: undefined }
+      : null,
     profile: profile
       ? {
           fullName: profile.fullName,
@@ -94,7 +181,10 @@ async function loadHome() {
         }
       : null,
     projects: projects.map(toProject),
-    skillGroups: [...skillGroups].map(([category, items]) => ({ category, items })),
+    skillGroups: [...skillGroups].map(([category, items]) => ({
+      category,
+      items,
+    })),
     timeline: [
       ...experiences.map((e) => ({
         id: e.id,
@@ -107,18 +197,17 @@ async function loadHome() {
         achievements: e.achievements,
         isCurrent: e.isCurrent,
       })),
-      ...education.map((e) => ({
-        id: e.id,
-        kind: "education" as const,
-        title: e.institution,
-        subtitle: [[e.degree, e.fieldOfStudy].filter(Boolean).join(", "), e.gpa && `GPA ${e.gpa}`].filter(Boolean).join(" · "),
-        period: formatYearRange(iso(e.startDate), iso(e.endDate), e.isCurrent),
-        location: e.location,
-        description: e.description,
-        achievements: [] as string[],
-        isCurrent: e.isCurrent,
-      })),
     ],
+    education: education.map((e) => ({
+      id: e.id,
+      title: e.institution,
+      subtitle: [[e.degree, e.fieldOfStudy].filter(Boolean).join(", "), e.gpa && `GPA ${e.gpa}`].filter(Boolean).join(" · "),
+      period: formatYearRange(iso(e.startDate), iso(e.endDate), e.isCurrent),
+      location: e.location,
+      description: e.description,
+      achievements: [] as string[],
+      isCurrent: e.isCurrent,
+    })),
     milestones: milestones.map((m) => ({
       id: m.id,
       slug: m.slug,
@@ -133,8 +222,17 @@ async function loadHome() {
       routePosition: m.routePosition,
       image: image(m.image),
       // Related records are only linked when they are public themselves.
-      project: m.relatedProject?.status === "PUBLISHED" ? { slug: m.relatedProject.slug, title: m.relatedProject.title } : null,
-      experience: m.relatedExperience?.status === "PUBLISHED" ? { organization: m.relatedExperience.organization, position: m.relatedExperience.position } : null,
+      project:
+        m.relatedProject?.status === "PUBLISHED"
+          ? { slug: m.relatedProject.slug, title: m.relatedProject.title }
+          : null,
+      experience:
+        m.relatedExperience?.status === "PUBLISHED"
+          ? {
+              organization: m.relatedExperience.organization,
+              position: m.relatedExperience.position,
+            }
+          : null,
     })),
     certifications: certifications.map((c) => ({
       id: c.id,
@@ -147,9 +245,17 @@ async function loadHome() {
       credentialUrl: c.credentialUrl,
       description: c.description,
       // The certificate itself: an image (previewed in the page) or a PDF (opened in the browser).
-      file: c.image ? { ...image(c.image)!, isPdf: c.image.mimeType === "application/pdf" } : null,
+      file: c.image
+        ? { ...image(c.image)!, isPdf: c.image.mimeType === "application/pdf" }
+        : null,
     })),
-    socialLinks: socialLinks.map((s) => ({ id: s.id, platform: s.platform, label: s.label, url: s.url, icon: s.icon })),
+    socialLinks: socialLinks.map((s) => ({
+      id: s.id,
+      platform: s.platform,
+      label: s.label,
+      url: s.url,
+      icon: s.icon,
+    })),
   };
 }
 
@@ -160,9 +266,13 @@ export type PublicMilestone = HomeContent["milestones"][number];
  * Part of every cache key. Cached entries outlive deployments (e.g. Vercel's data cache), so when the shape
  * of the data below changes, bump this: new code then never reads an entry written by old code.
  */
-const DATA_VERSION = "2026-10-10.cert-file";
+const DATA_VERSION = "2026-10-12.education-section";
 
-export const getHomeContent = unstable_cache(loadHome, ["home-content", DATA_VERSION], { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 });
+export const getHomeContent = unstable_cache(
+  loadHome,
+  ["home-content", DATA_VERSION],
+  { tags: [PUBLIC_CONTENT_TAG], revalidate: 3600 },
+);
 
 export const getPublishedProjects = unstable_cache(
   async () => (await findProjects({ status: "PUBLISHED" })).map(toProject),

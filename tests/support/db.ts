@@ -12,3 +12,9 @@ export async function resetDatabase() {
 export async function createAdmin(email = "admin@example.test") {
   return prisma.user.create({ data: { email, name: "Test Admin" } });
 }
+
+/** The session Auth.js would hand out after sign-in: the user id plus a live refresh session. */
+export async function sessionFor(userId: string) {
+  const { createAdminSession } = await import("@/lib/services/admin-sessions");
+  return { user: { id: userId }, sid: (await createAdminSession(userId)).id };
+}

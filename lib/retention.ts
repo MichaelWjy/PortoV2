@@ -10,11 +10,12 @@ export const RETENTION_DAYS = {
 const daysAgo = (now: Date, n: number) => new Date(now.getTime() - n * 86_400_000);
 
 /** Deletes data older than its retention window. Returns how many rows of each kind were removed. */
-export async function pruneOldData(db: Pick<PrismaClient, "auditLog" | "analyticsEvent" | "rateLimitBucket">, now = new Date()) {
-  const [auditLogs, analyticsEvents, rateLimitBuckets] = await Promise.all([
+export async function pruneOldData(db: Pick<PrismaClient, "auditLog" | "analyticsEvent" | "rateLimitBucket" | "adminSession">, now = new Date()) {
+  const [auditLogs, analyticsEvents, rateLimitBuckets, adminSessions] = await Promise.all([
     db.auditLog.deleteMany({ where: { createdAt: { lt: daysAgo(now, RETENTION_DAYS.auditLog) } } }),
     db.analyticsEvent.deleteMany({ where: { createdAt: { lt: daysAgo(now, RETENTION_DAYS.analytics) } } }),
     db.rateLimitBucket.deleteMany({ where: { windowStart: { lt: daysAgo(now, RETENTION_DAYS.rateLimit) } } }),
+    db.adminSession.deleteMany({ where: { expiresAt: { lt: now } } }),
   ]);
-  return { auditLogs: auditLogs.count, analyticsEvents: analyticsEvents.count, rateLimitBuckets: rateLimitBuckets.count };
+  return { auditLogs: auditLogs.count, analyticsEvents: analyticsEvents.count, rateLimitBuckets: rateLimitBuckets.count, adminSessions: adminSessions.count };
 }

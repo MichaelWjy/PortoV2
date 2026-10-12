@@ -28,6 +28,7 @@ const fields: Field[] = [
   headline("aboutHeadline", "About headline"),
   headline("skillsHeadline", "Skills headline"),
   headline("experienceHeadline", "Experience headline"),
+  headline("educationHeadline", "Education headline"),
   headline("certificationsHeadline", "Certifications headline"),
   headline("contactHeadline", "Contact headline"),
   area("contactDescription", "Contact description"),

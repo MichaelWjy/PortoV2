@@ -4,7 +4,7 @@ import { getHomeContent } from "@/lib/services/public";
 import { Preloader } from "@/components/portfolio/Preloader";
 import { PublicShell } from "@/components/portfolio/PublicShell";
 import { Hero } from "@/components/portfolio/Hero";
-import { AboutSection, CertificationsSection, SkillsSection, ExperienceSection, ProjectsSection } from "@/components/portfolio/Sections";
+import { AboutSection, CertificationsSection, EducationSection, SkillsSection, ExperienceSection, ProjectsSection } from "@/components/portfolio/Sections";
 import { ContactSection } from "@/components/portfolio/ContactSection";
 import { JourneySection } from "@/components/roadmap/JourneySection";
 import { PageView } from "@/components/portfolio/PageView";
@@ -42,6 +42,7 @@ export default async function HomePage() {
             <AboutSection settings={settings} profile={profile} />
             <SkillsSection settings={settings} skillGroups={content.skillGroups} />
             <ExperienceSection settings={settings} timeline={content.timeline} />
+            <EducationSection settings={settings} education={content.education} />
             <CertificationsSection settings={settings} certifications={content.certifications} />
             <ContactSection settings={settings} socialLinks={content.socialLinks} />
           </main>

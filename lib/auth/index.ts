@@ -1,12 +1,14 @@
 import "server-only";
 import NextAuth, { type NextAuthConfig } from "next-auth";
+import { cookies } from "next/headers";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { devLoginEnabled, env, googleConfigured } from "@/lib/env";
 import { authorizeDevSignIn, authorizeOAuthSignIn } from "@/lib/services/admin-users";
 import { googleIdentity } from "@/lib/auth/google";
-import { SESSION_MAX_AGE, sessionIsFresh } from "@/lib/auth/session";
+import { refreshCookieOptions, REFRESH_COOKIE, SESSION_MAX_AGE } from "@/lib/auth/session";
+import { createAdminSession } from "@/lib/services/admin-sessions";
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
 import { clientIp, hashValue } from "@/lib/security/request";
 
@@ -55,14 +57,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token, user }) {
       if (user?.id) {
+        // Sign-in: start the 1-day refresh session. proxy.ts uses it to renew the 10-minute session cookie.
+        const refresh = await createAdminSession(user.id);
+        (await cookies()).set(REFRESH_COOKIE, refresh.token, refreshCookieOptions(env.APP_URL.startsWith("https:")));
         token.uid = user.id;
-        token.loginAt = Math.floor(Date.now() / 1000);
+        token.sid = refresh.id;
       }
-      // Fixed lifetime counted from sign-in: refreshing the cookie never extends it. Null ends the session.
-      return sessionIsFresh(token.loginAt) ? token : null;
+      return token;
     },
     async session({ session, token }) {
       if (typeof token.uid === "string") session.user.id = token.uid;
+      if (typeof token.sid === "string") (session as typeof session & { sid?: string }).sid = token.sid;
       return session;
     },
   },

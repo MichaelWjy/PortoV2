@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { pruneOldData, RETENTION_DAYS } from "@/lib/retention";
 import { deleteAllMessages } from "@/app/admin/(panel)/actions";
 import { GET as cronPrune } from "@/app/api/cron/prune/route";
-import { createAdmin, resetDatabase } from "../support/db";
+import { createAdmin, resetDatabase, sessionFor } from "../support/db";
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
 let actor: string;
@@ -49,7 +49,7 @@ describe("delete all messages", () => {
   });
 
   it("deletes every message, archived included, and records it in the audit log", async () => {
-    auth.mockResolvedValue({ user: { id: actor } });
+    auth.mockResolvedValue(await sessionFor(actor));
     await prisma.contactMessage.createMany({
       data: [
         { name: "A", email: "a@example.test", message: "Hello there!" },

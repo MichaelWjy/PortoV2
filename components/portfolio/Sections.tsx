@@ -132,6 +132,30 @@ export function SkillsSection({ settings, skillGroups }: { settings: Settings; s
   );
 }
 
+type TimelineItem = HomeContent["timeline"][number] | HomeContent["education"][number];
+
+function Timeline({ items }: { items: TimelineItem[] }) {
+  return (
+    <ol className="tl">
+      {items.map((t) => (
+        <li key={t.id}>
+          <b>{t.title}</b>
+          {t.subtitle && <span>{t.subtitle}</span>}
+          {(t.period || t.location) && <em>{[t.period, t.location].filter(Boolean).join(" · ")}</em>}
+          {t.description && <p>{t.description}</p>}
+          {t.achievements.length > 0 && (
+            <ul>
+              {t.achievements.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function ExperienceSection({ settings, timeline }: { settings: Settings; timeline: HomeContent["timeline"] }) {
   return (
     <section className="s tight" id="experience" aria-labelledby="experience-title">
@@ -139,27 +163,21 @@ export function ExperienceSection({ settings, timeline }: { settings: Settings; 
         <h2 className="h" id="experience-title">
           <Multiline text={settings.experienceHeadline} />
         </h2>
-        {timeline.length ? (
-          <ol className="tl">
-            {timeline.map((t) => (
-              <li key={t.id}>
-                <b>{t.title}</b>
-                {t.subtitle && <span>{t.subtitle}</span>}
-                {(t.period || t.location) && <em>{[t.period, t.location].filter(Boolean).join(" · ")}</em>}
-                {t.description && <p>{t.description}</p>}
-                {t.achievements.length > 0 && (
-                  <ul>
-                    {t.achievements.map((a) => (
-                      <li key={a}>{a}</li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="lead">Experience will appear here soon.</p>
-        )}
+        {timeline.length ? <Timeline items={timeline} /> : <p className="lead">Experience will appear here soon.</p>}
+      </div>
+    </section>
+  );
+}
+
+export function EducationSection({ settings, education }: { settings: Settings; education: HomeContent["education"] }) {
+  if (education.length === 0) return null;
+  return (
+    <section className="s tight" id="education" aria-labelledby="education-title">
+      <div className="wrap split">
+        <h2 className="h" id="education-title">
+          <Multiline text={settings.educationHeadline} />
+        </h2>
+        <Timeline items={education} />
       </div>
     </section>
   );

@@ -12,7 +12,7 @@ test.describe("admin CMS", () => {
     await page.goto("/admin/login");
     await page.getByPlaceholder("admin e-mail").fill("intruder@example.test");
     await page.getByRole("button", { name: "Sign in (dev)" }).click();
-    await expect(page.getByRole("alert")).toContainText("not authorized");
+    await expect(page.getByRole("alert").filter({ hasText: "not authorized" })).toBeVisible();
     await ctx.close();
   });
 
@@ -25,7 +25,7 @@ test.describe("admin CMS", () => {
     await page.goto("/admin/projects/new");
     await page.getByLabel("Title").fill("E2E Project");
     await page.getByLabel("Slug").fill("e2e-project");
-    await page.getByLabel("Type", { exact: true }).fill("Test App");
+    await page.locator("#f-projectType").fill("Test App");
     await page.getByLabel("Short description").fill("Created by Playwright.");
     await page.getByLabel("Overview").fill("Overview text.");
     await page.getByRole("button", { name: "Create" }).click();

@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { authorizeOAuthSignIn } from "@/lib/services/admin-users";
 import { getAdmin } from "@/lib/auth/guard";
 import { deleteRecord, saveProject, setAdminActive } from "@/app/admin/(panel)/actions";
-import { createAdmin, resetDatabase } from "../support/db";
+import { createAdmin, resetDatabase, sessionFor } from "../support/db";
 
 beforeEach(async () => {
   await resetDatabase();
@@ -51,9 +51,18 @@ describe("server-side admin guard", () => {
 
   it("re-checks the database, so revocation applies to existing sessions", async () => {
     const u = await createAdmin();
-    auth.mockResolvedValue({ user: { id: u.id } });
+    auth.mockResolvedValue(await sessionFor(u.id));
     expect((await getAdmin())?.id).toBe(u.id);
     await prisma.user.update({ where: { id: u.id }, data: { isActive: false } });
+    expect(await getAdmin()).toBeNull();
+  });
+
+  it("refuses a session cookie whose refresh session was ended by signing out", async () => {
+    const u = await createAdmin();
+    const session = await sessionFor(u.id);
+    auth.mockResolvedValue(session);
+    expect((await getAdmin())?.id).toBe(u.id);
+    await prisma.adminSession.delete({ where: { id: session.sid } });
     expect(await getAdmin()).toBeNull();
   });
 
@@ -68,7 +77,7 @@ describe("server-side admin guard", () => {
 
   it("validates input and creates content for an authorized admin", async () => {
     const u = await createAdmin();
-    auth.mockResolvedValue({ user: { id: u.id } });
+    auth.mockResolvedValue(await sessionFor(u.id));
     const bad = new FormData();
     bad.set("slug", "Not A Slug");
     const res = await saveProject({}, bad);
@@ -78,7 +87,7 @@ describe("server-side admin guard", () => {
 
   it("prevents an admin from deactivating themselves", async () => {
     const u = await createAdmin();
-    auth.mockResolvedValue({ user: { id: u.id } });
+    auth.mockResolvedValue(await sessionFor(u.id));
     expect((await setAdminActive(u.id, false)).ok).toBeFalsy();
     expect((await prisma.user.findUnique({ where: { id: u.id } }))?.isActive).toBe(true);
   });

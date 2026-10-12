@@ -11,7 +11,10 @@ import { prisma } from "@/lib/db";
 import { recordAudit } from "@/lib/services/audit";
 import { toSafeMessage } from "@/lib/services/errors";
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
-import { signOut } from "@/lib/auth";
+import { auth, signOut } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { REFRESH_COOKIE } from "@/lib/auth/session";
+import { endAdminSession } from "@/lib/services/admin-sessions";
 import {
   adminUserSchema,
   educationSchema,
@@ -207,6 +210,10 @@ export async function setAdminActive(id: string, isActive: boolean): Promise<For
 // Session -----------------------------------------------------------------------------
 
 export async function signOutAction() {
+  // End the refresh session first, so no copy of the session cookie can be renewed or used afterwards.
+  const sid = ((await auth()) as { sid?: string } | null)?.sid;
+  if (sid) await endAdminSession(sid);
+  (await cookies()).delete(REFRESH_COOKIE);
   await signOut({ redirect: false });
   redirect("/admin/login?signedOut=1");
 }

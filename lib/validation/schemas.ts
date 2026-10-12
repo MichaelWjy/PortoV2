@@ -220,6 +220,7 @@ export const siteSettingsSchema = z.object({
   aboutHeadline: copy(80),
   skillsHeadline: copy(80),
   experienceHeadline: copy(80),
+  educationHeadline: copy(80),
   certificationsHeadline: copy(80),
   contactHeadline: copy(80),
   contactDescription: copy(400),
