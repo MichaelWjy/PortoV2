@@ -119,6 +119,7 @@ export const educationSchema = z
     institution: text(120),
     degree: optionalText(120),
     fieldOfStudy: optionalText(120),
+    gpa: optionalText(20),
     location: optionalText(120),
     description: optionalText(5000),
     startDate: optionalDate,

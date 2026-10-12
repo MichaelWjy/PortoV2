@@ -111,7 +111,7 @@ async function loadHome() {
         id: e.id,
         kind: "education" as const,
         title: e.institution,
-        subtitle: [e.degree, e.fieldOfStudy].filter(Boolean).join(", "),
+        subtitle: [[e.degree, e.fieldOfStudy].filter(Boolean).join(", "), e.gpa && `GPA ${e.gpa}`].filter(Boolean).join(" · "),
         period: formatYearRange(iso(e.startDate), iso(e.endDate), e.isCurrent),
         location: e.location,
         description: e.description,

@@ -200,6 +200,8 @@ model Education {
   institution  String
   degree       String?
   fieldOfStudy String?
+  /// Free text, e.g. "3.85 / 4.00"; shown as "GPA …" on the site.
+  gpa          String?
   location     String?
   description  String?
   startDate    DateTime?     @db.Date

@@ -5,6 +5,10 @@ import { CertificatePreview } from "./CertificatePreview";
 import type { HomeContent } from "@/lib/services/public";
 import { Multiline } from "./Multiline";
 import { ProjectCard } from "./ProjectCard";
+import { ProjectCarousel } from "./ProjectCarousel";
+
+/** Featured projects shown on the home page; any beyond this go behind a "Show more projects" card. */
+const HOME_PROJECTS = 5;
 
 type Settings = NonNullable<HomeContent["settings"]>;
 
@@ -22,11 +26,18 @@ export function ProjectsSection({ settings, projects }: { settings: Settings; pr
           </Link>
         </div>
         {projects.length ? (
-          <div className="cards">
-            {projects.map((p, i) => (
+          <ProjectCarousel>
+            {projects.slice(0, HOME_PROJECTS).map((p, i) => (
               <ProjectCard key={p.id} project={p} index={i} />
             ))}
-          </div>
+            {projects.length > HOME_PROJECTS && (
+              <Link className="pc pc-more" href="/projects">
+                <span className="mono">+{projects.length - HOME_PROJECTS} more</span>
+                <b>Show more projects</b>
+                <ArrowUpRight size={22} aria-hidden="true" />
+              </Link>
+            )}
+          </ProjectCarousel>
         ) : (
           <p className="lead">Featured projects will appear here soon.</p>
         )}

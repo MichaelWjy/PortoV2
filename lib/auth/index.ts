@@ -6,10 +6,9 @@ import { z } from "zod";
 import { devLoginEnabled, env, googleConfigured } from "@/lib/env";
 import { authorizeDevSignIn, authorizeOAuthSignIn } from "@/lib/services/admin-users";
 import { googleIdentity } from "@/lib/auth/google";
+import { SESSION_MAX_AGE, sessionIsFresh } from "@/lib/auth/session";
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
 import { clientIp, hashValue } from "@/lib/security/request";
-
-const SESSION_MAX_AGE = 8 * 60 * 60;
 
 const providers: NextAuthConfig["providers"] = [];
 
@@ -55,8 +54,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
-      if (user?.id) token.uid = user.id;
-      return token;
+      if (user?.id) {
+        token.uid = user.id;
+        token.loginAt = Math.floor(Date.now() / 1000);
+      }
+      // Fixed lifetime counted from sign-in: refreshing the cookie never extends it. Null ends the session.
+      return sessionIsFresh(token.loginAt) ? token : null;
     },
     async session({ session, token }) {
       if (typeof token.uid === "string") session.user.id = token.uid;

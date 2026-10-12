@@ -211,6 +211,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: "institution", label: "Institution", type: "text", required: true },
       { name: "degree", label: "Degree", type: "text" },
       { name: "fieldOfStudy", label: "Field of study", type: "text" },
+      { name: "gpa", label: "GPA", type: "text", placeholder: "3.85 / 4.00", help: "Optional. Shown as “GPA 3.85 / 4.00”; leave empty to hide it." },
       { name: "location", label: "Location", type: "text" },
       { name: "status", label: "Status", type: "status" },
       { name: "startDate", label: "Start date", type: "date" },
