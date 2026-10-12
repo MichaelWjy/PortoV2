@@ -308,12 +308,6 @@ html[data-intro="playing"] .hero h1 { opacity: 0; transform: translateY(24px); }
 .journey .ctl.go { background: var(--ui-accent); color: var(--ui-accent-ink); }
 .journey .ctl:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ol); }
 .journey :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.journey-list { padding: 18px 0 0; }
-.journey-list summary { cursor: pointer; color: var(--mut); padding: 8px 0; }
-.journey-list ol { list-style: none; padding: 16px 0 8px; display: grid; gap: 22px; max-width: 640px; }
-.journey-list li b { display: block; font-weight: 500; font-size: 18px; }
-.journey-list li span { display: block; margin-top: 4px; color: var(--soft); font-size: 14px; line-height: 1.55; }
-.journey-list li em { font-style: normal; color: var(--mut); }
 
 /* Sections ----------------------------------------------------------------- */
 section.s { padding: clamp(80px, 12vw, 150px) 0; position: relative; scroll-margin-top: 40px; }

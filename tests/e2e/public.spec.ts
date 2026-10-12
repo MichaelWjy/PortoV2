@@ -68,9 +68,10 @@ test.describe("public site", () => {
     await expect(page.getByTestId("milestone-card").getByRole("heading")).toHaveText("High School", { timeout: 10_000 });
   });
 
-  test("the journey is available as a plain list", async ({ page }) => {
+  test("the journey is available to screen readers as a list, with no visible toggle", async ({ page }) => {
     await page.goto("/");
-    await page.getByText("View the journey as a list").click();
+    await expect(page.getByText("View the journey as a list")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Journey milestones" })).toBeAttached();
     await expect(page.locator(".journey-list li")).toHaveCount(7);
   });
 
